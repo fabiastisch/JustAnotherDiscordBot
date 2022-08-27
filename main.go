@@ -26,7 +26,10 @@ func main() {
 		log.Fatalf("Error while starting bot: %s", error)
 	}
 
-	bot.AddHandler(reactOnMessage)
+	commandFactory := newCommandFactory()
+
+	commandHandler := CommandHandler{commandFactory}
+	bot.AddHandler(commandHandler.handleCommands)
 
 	bot.Identify.Intents = discordgo.IntentGuildMessages
 	// connection will receive only events defined by this intent
@@ -45,23 +48,5 @@ func main() {
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
 	bot.Close()
-
-}
-
-func reactOnMessage(session *discordgo.Session, message *discordgo.MessageCreate) {
-
-	if message.Author.Bot {
-		return
-	}
-
-	if message.Content == "ping" {
-		session.ChannelMessageSend(message.ChannelID, "pong")
-		return
-	}
-
-	if message.Content == "krossekrabbe" {
-		session.ChannelMessageSend(message.ChannelID, "Nein, hier ist Patrick!")
-		return
-	}
 
 }
