@@ -61,7 +61,7 @@ func main() {
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
-	bot.Close()
+	defer bot.Close()
 
 	for _, v := range handlers {
 		v.CleanupCommands()

@@ -6,9 +6,10 @@ import (
 )
 
 type SlashCommandHandler struct {
-	cmdMap  map[string]SlashCommand
-	GuildID string
-	session *discordgo.Session
+	cmdMap             map[string]SlashCommand
+	registeredCommands []*discordgo.ApplicationCommand
+	GuildID            string
+	session            *discordgo.Session
 }
 
 func NewSlashCommandHandler(session *discordgo.Session, guildID string) (handler *SlashCommandHandler) {
@@ -32,21 +33,22 @@ func (receiver *SlashCommandHandler) RegisterCommand(command SlashCommand) {
 		log.Panicf("Cannot create '%v' command. There is an already existing command.", command.ApplicationCommand().Name)
 		return
 	}
-	receiver.cmdMap[command.ApplicationCommand().Name] = command
 
-	_, err := receiver.session.ApplicationCommandCreate(receiver.session.State.User.ID, receiver.GuildID, command.ApplicationCommand())
+	applicationCommand, err := receiver.session.ApplicationCommandCreate(receiver.session.State.User.ID, receiver.GuildID, command.ApplicationCommand())
 	if err != nil {
 		log.Panicf("Cannot create '%v' command: %v", command.ApplicationCommand().Name, err)
 		return
 	}
+	receiver.registeredCommands = append(receiver.registeredCommands, applicationCommand)
+	receiver.cmdMap[command.ApplicationCommand().Name] = command
 	log.Printf("Successfully created '%v' command\n", command.ApplicationCommand().Name)
 }
 
 func (receiver *SlashCommandHandler) CleanupCommands() {
-	for _, v := range receiver.cmdMap {
-		err := receiver.session.ApplicationCommandDelete(receiver.session.State.User.ID, receiver.GuildID, v.ApplicationCommand().ID)
+	for _, v := range receiver.registeredCommands {
+		err := receiver.session.ApplicationCommandDelete(receiver.session.State.User.ID, receiver.GuildID, v.ID)
 		if err != nil {
-			log.Panicf("Cannot delete '%v' command: %v", v.ApplicationCommand().Name, err)
+			log.Panicf("Cannot delete '%v' command: %v", v.Name, err)
 		}
 	}
 	log.Println("\nFinished Removing Commands")
