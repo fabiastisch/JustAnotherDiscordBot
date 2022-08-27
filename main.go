@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
+	"justAnotherDiscordBot/ApplicationCommand"
+	"justAnotherDiscordBot/ApplicationCommand/commands"
 	"log"
 	"os"
 	"os/signal"
@@ -27,7 +29,6 @@ func main() {
 	}
 
 	bot.AddHandler(reactOnMessage)
-
 	bot.Identify.Intents = discordgo.IntentGuildMessages
 	// connection will receive only events defined by this intent
 	// Todo: Add intents if needed
@@ -39,13 +40,17 @@ func main() {
 		return
 	}
 
-	fmt.Printf("The Bot is now running")
+	ApplicationCommand.RegisterCommand(commands.Ping{}) // could be done in ApplicationCommand package
+	ApplicationCommand.FinishCommands(bot)
+
+	fmt.Printf("The Bot is now running\n")
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
 	bot.Close()
 
+	ApplicationCommand.RemoveCommands(bot)
 }
 
 func reactOnMessage(session *discordgo.Session, message *discordgo.MessageCreate) {
