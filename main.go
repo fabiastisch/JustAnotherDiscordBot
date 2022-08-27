@@ -12,6 +12,10 @@ import (
 	"syscall"
 )
 
+var (
+	handlers []*ApplicationCommand.SlashCommandHandler
+)
+
 func main() {
 
 	err := godotenv.Load(".env")
@@ -40,8 +44,17 @@ func main() {
 		return
 	}
 
-	ApplicationCommand.RegisterCommand(commands.Ping{}) // could be done in ApplicationCommand package
-	ApplicationCommand.FinishCommands(bot)
+	for _, guild := range bot.State.Guilds {
+		fmt.Println("Create Slash CommandHandler for Guild: " + guild.ID)
+		/*x, err := bot.Guild(guild.ID)
+		if err != nil {
+			return
+		}
+		fmt.Println(x.Name)*/
+		h := ApplicationCommand.NewSlashCommandHandler(bot, guild.ID)
+		h.RegisterCommand(commands.Ping{})
+		handlers = append(handlers, h)
+	}
 
 	fmt.Printf("The Bot is now running\n")
 
@@ -50,7 +63,11 @@ func main() {
 	<-sc
 	bot.Close()
 
-	ApplicationCommand.RemoveCommands(bot)
+	for _, v := range handlers {
+		v.CleanupCommands()
+	}
+
+	log.Println("Gracefully shutting down.")
 }
 
 func reactOnMessage(session *discordgo.Session, message *discordgo.MessageCreate) {

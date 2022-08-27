@@ -1,53 +1,52 @@
 package ApplicationCommand
 
 import (
-	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"log"
 )
 
-var (
-	cmdMap             map[string]SlashCommand
-	registeredCommands []*discordgo.ApplicationCommand
-	GuildID            = "1012517914387173437"
-)
-
-func RegisterCommand(command SlashCommand) {
-	if len(cmdMap) == 0 {
-		fmt.Println("Cmd len 0")
-		cmdMap = make(map[string]SlashCommand)
-	}
-	cmdMap[command.ApplicationCommand().Name] = command
+type SlashCommandHandler struct {
+	cmdMap  map[string]SlashCommand
+	GuildID string
+	session *discordgo.Session
 }
 
-// FinishCommands
-// Bot has to be Running to get `s.State.User.ID`
-func FinishCommands(s *discordgo.Session) {
-	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		if command, ok := cmdMap[i.ApplicationCommandData().Name]; ok {
-			command.Execute(s, i)
-		}
-	})
+func NewSlashCommandHandler(session *discordgo.Session, guildID string) (handler *SlashCommandHandler) {
+	handler = &SlashCommandHandler{
+		cmdMap:  make(map[string]SlashCommand),
+		GuildID: guildID,
+		session: session,
+	}
+	handler.session.AddHandler(handler.HandleInteractionCreate)
+	return
+}
 
-	log.Println("Adding commands...")
-	registeredCommands = make([]*discordgo.ApplicationCommand, len(cmdMap))
-
-	i := 0
-	for _, v := range cmdMap {
-		cmd, err := s.ApplicationCommandCreate(s.State.User.ID, GuildID, v.ApplicationCommand())
-		if err != nil {
-			log.Panicf("Cannot create '%v' command: %v", v.ApplicationCommand().Name, err)
-		}
-		registeredCommands[i] = cmd
-		i++
+func (receiver *SlashCommandHandler) HandleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if command, ok := receiver.cmdMap[i.ApplicationCommandData().Name]; ok {
+		command.Execute(s, i)
 	}
 }
 
-func RemoveCommands(s *discordgo.Session) {
-	for _, v := range registeredCommands {
-		err := s.ApplicationCommandDelete(s.State.User.ID, GuildID, v.ID)
+func (receiver *SlashCommandHandler) RegisterCommand(command SlashCommand) {
+	if receiver.cmdMap[command.ApplicationCommand().Name] != nil {
+		log.Panicf("Cannot create '%v' command. There is an already existing command.", command.ApplicationCommand().Name)
+		return
+	}
+	receiver.cmdMap[command.ApplicationCommand().Name] = command
+
+	_, err := receiver.session.ApplicationCommandCreate(receiver.session.State.User.ID, receiver.GuildID, command.ApplicationCommand())
+	if err != nil {
+		log.Panicf("Cannot create '%v' command: %v", command.ApplicationCommand().Name, err)
+		return
+	}
+	log.Printf("Successfully created '%v' command\n", command.ApplicationCommand().Name)
+}
+
+func (receiver *SlashCommandHandler) CleanupCommands() {
+	for _, v := range receiver.cmdMap {
+		err := receiver.session.ApplicationCommandDelete(receiver.session.State.User.ID, receiver.GuildID, v.ApplicationCommand().ID)
 		if err != nil {
-			log.Panicf("Cannot delete '%v' command: %v", v.Name, err)
+			log.Panicf("Cannot delete '%v' command: %v", v.ApplicationCommand().Name, err)
 		}
 	}
 	log.Println("\nFinished Removing Commands")
