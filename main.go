@@ -43,6 +43,7 @@ func main() {
 		log.Fatalf("Error while connecting to gateaway: %s", error)
 		return
 	}
+	defer bot.Close()
 
 	for _, guild := range bot.State.Guilds {
 		fmt.Println("Create Slash CommandHandler for Guild: " + guild.ID)
