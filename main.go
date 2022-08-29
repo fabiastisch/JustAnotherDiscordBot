@@ -32,6 +32,12 @@ func main() {
 		log.Fatalf("Error while starting bot: %s", error)
 	}
 
+	// Ready Function
+	bot.AddHandler(func(s *discordgo.Session, ready *discordgo.Ready) {
+		s.UpdateGameStatus(0, "Playing with commands.")
+		fmt.Printf("Logged in as: %v#%v\n", s.State.User.Username, s.State.User.Discriminator)
+	})
+
 	bot.AddHandler(reactOnMessage)
 	bot.Identify.Intents = discordgo.IntentGuildMessages
 	// connection will receive only events defined by this intent
@@ -62,7 +68,6 @@ func main() {
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
-	defer bot.Close()
 
 	for _, v := range handlers {
 		v.CleanupCommands()
