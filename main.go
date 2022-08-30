@@ -6,6 +6,7 @@ import (
 	"github.com/joho/godotenv"
 	"justAnotherDiscordBot/ApplicationCommand"
 	"justAnotherDiscordBot/ApplicationCommand/commands"
+	"justAnotherDiscordBot/MessageCommand"
 	"log"
 	"os"
 	"os/signal"
@@ -53,15 +54,17 @@ func main() {
 
 	for _, guild := range bot.State.Guilds {
 		fmt.Println("Create Slash CommandHandler for Guild: " + guild.ID)
-		/*x, err := bot.Guild(guild.ID)
+		x, err := bot.Guild(guild.ID)
 		if err != nil {
 			return
 		}
-		fmt.Println(x.Name)*/
+		fmt.Println(x.Name)
 		h := ApplicationCommand.NewSlashCommandHandler(bot, guild.ID)
 		h.RegisterCommand(commands.Ping{})
 		handlers = append(handlers, h)
 	}
+
+	MessageCommand.NewHandler(bot)
 
 	fmt.Printf("The Bot is now running\n")
 
