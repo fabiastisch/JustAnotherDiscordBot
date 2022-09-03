@@ -38,7 +38,6 @@ func main() {
 		fmt.Printf("Logged in as: %v#%v\n", s.State.User.Username, s.State.User.Discriminator)
 	})
 
-	bot.AddHandler(reactOnMessage)
 	bot.Identify.Intents = discordgo.IntentGuildMessages
 	// connection will receive only events defined by this intent
 	// Todo: Add intents if needed
@@ -62,6 +61,8 @@ func main() {
 		h.RegisterCommand(commands.Ping{})
 		h.RegisterCommand(commands.Canteen{})
 		handlers = append(handlers, h)
+
+		log.Print(handlers)
 	}
 
 	fmt.Printf("The Bot is now running\n")
@@ -75,22 +76,4 @@ func main() {
 	}
 
 	log.Println("Gracefully shutting down.")
-}
-
-func reactOnMessage(session *discordgo.Session, message *discordgo.MessageCreate) {
-
-	if message.Author.Bot {
-		return
-	}
-
-	if message.Content == "ping" {
-		session.ChannelMessageSend(message.ChannelID, "pong")
-		return
-	}
-
-	if message.Content == "krossekrabbe" {
-		session.ChannelMessageSend(message.ChannelID, "Nein, hier ist Patrick!")
-		return
-	}
-
 }

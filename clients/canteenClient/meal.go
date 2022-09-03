@@ -15,5 +15,5 @@ type Meal struct {
 	Vegetarian  string       `xml:"vegetarisch,attr"`
 	Alcohol     string       `xml:"alkohol,attr"`
 	Description Descritption `xml:"deutsch"`
-	Price       Price        `xml:"pr"`
+	Price       []Price      `xml:"pr"`
 }
