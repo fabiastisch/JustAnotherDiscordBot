@@ -23,8 +23,11 @@ func NewSlashCommandHandler(session *discordgo.Session, guildID string) (handler
 }
 
 func (receiver *SlashCommandHandler) HandleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	if command, ok := receiver.cmdMap[i.ApplicationCommandData().Name]; ok {
-		command.Execute(s, i)
+	//log.Println("Interaction Guild:  " + i.Interaction.GuildID + " | Receiver Guild: " + receiver.GuildID)
+	if i.GuildID == receiver.GuildID {
+		if command, ok := receiver.cmdMap[i.ApplicationCommandData().Name]; ok {
+			command.Execute(s, i)
+		}
 	}
 }
 
