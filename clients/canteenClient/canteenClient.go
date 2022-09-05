@@ -2,6 +2,7 @@ package canteenClient
 
 import (
 	"encoding/xml"
+	"github.com/bwmarrin/discordgo"
 	"log"
 	"net/http"
 	"strconv"
@@ -71,7 +72,9 @@ Du hast Bock auf ein Stück Kuchen danach? Dann hols Dir aus der Torten- und Kuc
 </speiseplan>
 `
 
-func Request() string {
+func Request(session *discordgo.Session, interactionCreate *discordgo.InteractionCreate) string {
+
+	log.Print("wow")
 
 	resp, err := http.Get("https://www.swcz.de/bilderspeiseplan/xml.php?plan=1479835489")
 
@@ -106,20 +109,30 @@ func Request() string {
 			return "Heute ist kein Speiseplan verfügbar"
 		}
 
-		return buildResponse(menu)
+		buildResponse(session, interactionCreate, menu)
 
 	}
 
 	return resp.Status
 }
 
-func buildResponse(menu *Menu) string {
+func buildResponse(session *discordgo.Session, interactionCreate *discordgo.InteractionCreate, menu *Menu) {
 	var stringBuilder strings.Builder
-	for i, meal := range menu.Meal {
-		strconv.Itoa(i)
+	for _, meal := range menu.Meal {
+		stringBuilder.WriteString("\n\n\n\n")
+		stringBuilder.WriteString("\n\n\n\n")
+
 		stringBuilder.WriteString("\n" + meal.Description.Value)
-		stringBuilder.WriteString("\n" + meal.ImgSmall)
+
+		spam(session, interactionCreate, stringBuilder.String())
+		stringBuilder.Reset()
+
+		stringBuilder.WriteString("\n" + meal.ImgBig)
 		stringBuilder.WriteString("\n")
+
+		spam(session, interactionCreate, stringBuilder.String())
+		stringBuilder.Reset()
+
 		vegeterian, _ := strconv.ParseBool(meal.Vegetarian)
 		beef, _ := strconv.ParseBool(meal.Beef)
 		alcohol, _ := strconv.ParseBool(meal.Alcohol)
@@ -153,6 +166,14 @@ func buildResponse(menu *Menu) string {
 			stringBuilder.WriteString(price.GroupPrice)
 		}
 		stringBuilder.WriteString("\n\n\n\n")
+		spam(session, interactionCreate, stringBuilder.String())
+		stringBuilder.Reset()
+		stringBuilder.WriteString("\n\n\n\n")
+		stringBuilder.WriteString("\n\n\n\n")
+
 	}
-	return stringBuilder.String()
+}
+
+func spam(s *discordgo.Session, interactionCreate *discordgo.InteractionCreate, info string) {
+	s.ChannelMessageSend(interactionCreate.ChannelID, info)
 }

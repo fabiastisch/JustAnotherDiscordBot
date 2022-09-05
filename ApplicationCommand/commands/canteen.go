@@ -16,10 +16,5 @@ func (e Canteen) ApplicationCommand() *discordgo.ApplicationCommand {
 }
 
 func (e Canteen) Execute(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: canteenClient.Request(),
-		},
-	})
+	canteenClient.Request(s, i)
 }
