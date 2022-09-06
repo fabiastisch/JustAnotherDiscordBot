@@ -2,6 +2,7 @@ package MessageCommand
 
 import (
 	"github.com/bwmarrin/discordgo"
+	"justAnotherDiscordBot/Interfaces"
 	"justAnotherDiscordBot/MessageCommand/commands"
 	"log"
 )
@@ -30,7 +31,7 @@ func (receiver *Handler) HandleInteractionCreate(s *discordgo.Session, i *discor
 	switch i.Type {
 	case discordgo.InteractionMessageComponent:
 		for _, v := range receiver.cmdMap {
-			if h, ok := v.(HandleInteractionCreate); ok {
+			if h, ok := v.(Interfaces.HandleInteractionCreate); ok {
 				h.HandleInteractionCreate(s, i)
 			}
 		}

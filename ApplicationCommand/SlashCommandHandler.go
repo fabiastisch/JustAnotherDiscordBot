@@ -2,6 +2,7 @@ package ApplicationCommand
 
 import (
 	"github.com/bwmarrin/discordgo"
+	"justAnotherDiscordBot/Interfaces"
 	"log"
 )
 
@@ -27,6 +28,12 @@ func (receiver *SlashCommandHandler) HandleInteractionCreate(s *discordgo.Sessio
 	case discordgo.InteractionApplicationCommand:
 		if command, ok := receiver.cmdMap[i.ApplicationCommandData().Name]; ok {
 			command.Execute(s, i)
+		}
+	case discordgo.InteractionMessageComponent:
+		for _, v := range receiver.cmdMap {
+			if h, ok := v.(Interfaces.HandleInteractionCreate); ok {
+				h.HandleInteractionCreate(s, i)
+			}
 		}
 	}
 }
