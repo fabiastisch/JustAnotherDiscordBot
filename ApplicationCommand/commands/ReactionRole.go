@@ -64,21 +64,32 @@ func (e ReactionRole) Execute(s *discordgo.Session, i *discordgo.InteractionCrea
 		optionMap[opt.Name] = opt
 	}
 
+	// make a set to ignore dupplicates in roles
+	allRoles := make(map[string]bool)
+
 	if opt, ok := optionMap["role-option"]; ok {
 		var selectMenuOptions []discordgo.SelectMenuOption
 
+		role := opt.RoleValue(s, i.GuildID)
+		allRoles[role.ID] = true // add to set
 		selectMenuOptions = append(selectMenuOptions, discordgo.SelectMenuOption{
-			Label:       opt.RoleValue(s, i.GuildID).Name,
-			Value:       opt.RoleValue(s, i.GuildID).ID,
+			Label:       role.Name,
+			Value:       role.ID,
 			Default:     false,
 			Description: "-",
 		})
 
 		for j := 1; j < 10; j++ {
 			if opt, ok := optionMap["role-option"+fmt.Sprint(j)]; ok {
+				role := opt.RoleValue(s, i.GuildID)
+				if _, ok := allRoles[role.ID]; ok { // check if role is in set
+					continue
+				}
+				allRoles[role.ID] = true // add to set
+
 				selectMenuOptions = append(selectMenuOptions, discordgo.SelectMenuOption{
-					Label:       opt.RoleValue(s, i.GuildID).Name,
-					Value:       opt.RoleValue(s, i.GuildID).ID,
+					Label:       role.Name,
+					Value:       role.ID,
 					Default:     false,
 					Description: "-",
 				})
@@ -122,7 +133,7 @@ func (e ReactionRole) Execute(s *discordgo.Session, i *discordgo.InteractionCrea
 			},
 		})
 		if err != nil {
-			log.Fatalln(err)
+			log.Panicln(err)
 		}
 
 	}
