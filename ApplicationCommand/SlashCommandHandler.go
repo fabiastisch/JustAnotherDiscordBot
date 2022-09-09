@@ -14,6 +14,7 @@ type SlashCommandHandler struct {
 }
 
 func NewSlashCommandHandler(session *discordgo.Session, guildID string) (handler *SlashCommandHandler) {
+	log.Println("NewSlashCommandHandler for guild: " + guildID)
 	handler = &SlashCommandHandler{
 		cmdMap:  make(map[string]SlashCommand),
 		GuildID: guildID,
@@ -27,6 +28,7 @@ func (receiver *SlashCommandHandler) HandleInteractionCreate(s *discordgo.Sessio
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
 		if command, ok := receiver.cmdMap[i.ApplicationCommandData().Name]; ok {
+			log.Println("Invoke " + command.ApplicationCommand().Name)
 			command.Execute(s, i)
 		}
 	case discordgo.InteractionMessageComponent:

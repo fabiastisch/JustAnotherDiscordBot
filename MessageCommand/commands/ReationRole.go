@@ -1,8 +1,8 @@
 package commands
 
 import (
-	"fmt"
 	"github.com/bwmarrin/discordgo"
+	"log"
 	"strings"
 )
 
@@ -13,13 +13,13 @@ func (f ReactionRole) HandleInteractionCreate(s *discordgo.Session, i *discordgo
 	switch i.Type {
 	case discordgo.InteractionMessageComponent:
 		if i.MessageComponentData().CustomID == "select" {
-			fmt.Println(i.MessageComponentData().Type())
-			fmt.Println(i.MessageComponentData().Values)
+			log.Println(i.MessageComponentData().Type())
+			log.Println(i.MessageComponentData().Values)
 			eighteen := "1013963333268942868"
 			sixteen := "1013963368329134152"
 			twelve := "1013963384745627690"
 			six := "1013963402810490951"
-			fmt.Println(i.Member.User.Username)
+			log.Println(i.Member.User.Username)
 
 			missing6, missing12, missing16, missing18 := true, true, true, true
 			for _, v := range i.MessageComponentData().Values {
