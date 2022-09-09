@@ -5,7 +5,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"log"
 	"reflect"
-	"strings"
+	"sort"
 )
 
 type ReactionRole struct {
@@ -39,6 +39,12 @@ func (e ReactionRole) ApplicationCommand() *discordgo.ApplicationCommand {
 		Required:    false,
 	})
 
+	applicationCommandOptions = append(applicationCommandOptions, &discordgo.ApplicationCommandOption{
+		Type:        discordgo.ApplicationCommandOptionBoolean,
+		Name:        "role-option-removable",
+		Description: "Removable",
+	})
+
 	return &discordgo.ApplicationCommand{
 		Name:        "reactionrole",
 		Description: "create a new Reaction role...",
@@ -62,6 +68,11 @@ func (e ReactionRole) Execute(s *discordgo.Session, i *discordgo.InteractionCrea
 	optionMap := make(map[string]*discordgo.ApplicationCommandInteractionDataOption, len(options))
 	for _, opt := range options {
 		optionMap[opt.Name] = opt
+	}
+
+	removable := false
+	if opt, ok := optionMap["role-option-removable"]; ok {
+		removable = opt.BoolValue()
 	}
 
 	// make a set to ignore dupplicates in roles
@@ -103,6 +114,8 @@ func (e ReactionRole) Execute(s *discordgo.Session, i *discordgo.InteractionCrea
 			maxValues = int(opt.IntValue())
 		}
 
+		integerOptionMinValue := 0
+
 		err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			//Type Value must be one of {9, 4, 5}
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -113,11 +126,17 @@ func (e ReactionRole) Execute(s *discordgo.Session, i *discordgo.InteractionCrea
 					discordgo.ActionsRow{
 						Components: []discordgo.MessageComponent{
 							discordgo.SelectMenu{
-								CustomID:    "ApplicationReactionRole-select",
+								CustomID: func() string {
+									if removable {
+										return "ApplicationReactionRole-select-removable"
+									} else {
+										return "ApplicationReactionRole-select"
+									}
+								}(),
 								Placeholder: "Choose your Roles",
-								MinValues:   nil,
+								MinValues:   &integerOptionMinValue,
 								MaxValues:   maxValues,
-								Options:     selectMenuOptions,
+								Options:     selectMenuOptions, // max 25 (https://discord.com/developers/docs/interactions/message-components#select-menu-object-select-menu-structure)
 								Disabled:    false,
 							},
 						},
@@ -142,86 +161,131 @@ func (e ReactionRole) Execute(s *discordgo.Session, i *discordgo.InteractionCrea
 func (f ReactionRole) HandleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	switch i.Type {
 	case discordgo.InteractionMessageComponent:
-		if i.MessageComponentData().CustomID != "ApplicationReactionRole-select" {
+		if i.MessageComponentData().CustomID != "ApplicationReactionRole-select" && i.MessageComponentData().CustomID != "ApplicationReactionRole-select-removable" {
 			return
+		}
+		removable := i.MessageComponentData().CustomID == "ApplicationReactionRole-select-removable"
+		allRoles := make(map[string]string)
+		for _, component := range i.Message.Components {
+			if component.Type() == discordgo.ActionsRowComponent {
+				actionRow := component.(*discordgo.ActionsRow)
+				//log.Println("Actionrow: " + fmt.Sprint(actionRow))
+				for _, messageComponent := range actionRow.Components {
+					if messageComponent.Type() == discordgo.SelectMenuComponent {
+						//log.Printf("Component: %#v\n", messageComponent.(*discordgo.SelectMenu))
+						menu := messageComponent.(*discordgo.SelectMenu)
+						//log.Println("Options: " + fmt.Sprint(menu.Options))
+						for _, option := range menu.Options {
+							allRoles[option.Value] = option.Label
+						}
+					}
+				}
+			}
 		}
 		log.Println(reflect.TypeOf(f).Name() + " | InteractionMessageComponent: " + i.MessageComponentData().CustomID + " | User: " + i.Member.User.Username)
 
-		fmt.Println(i.MessageComponentData().Type())
-		fmt.Println(i.MessageComponentData().Values)
-		log.Println(i.Data)
-
-		//fmt.Println(i.Member.User.Username)
-
-		//s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, i.MessageComponentData())
-
-		//missings := make([]bool, len(i.MessageComponentData().Values))
+		// get all GuildMember roles and sort it.
+		guildMemberRoles := i.Member.Roles
+		sort.Strings(guildMemberRoles)
 
 		var roles []string
-
+		// add selected Roles
 		for _, v := range i.MessageComponentData().Values {
-			log.Println("Add GuildMemberRole " + v + " | " + i.Member.Nick)
+			roles = append(roles, v)
+			if UserHasRole(guildMemberRoles, v) {
+				continue
+			}
+			log.Println("Add GuildMemberRole " + v + " | " + i.Member.User.Username)
 			err := s.GuildMemberRoleAdd(i.GuildID, i.Member.User.ID, v)
 			if err != nil {
 				log.Println(err)
 			}
-			roles = append(roles, v)
 			//missings = false
-
 		}
 
+		//make a map with the selected roles and rolename
 		gRoles, err := s.GuildRoles(i.GuildID)
 		if err != nil {
 			panic(err)
 		}
-		var selecetRoles []string
+		selecetRoles := make(map[string]string)
 		for _, r := range roles {
 			for _, v := range gRoles {
 				if r == v.ID {
-					selecetRoles = append(selecetRoles, v.Name)
+					selecetRoles[v.ID] = v.Name
 					break
 				}
 			}
 		}
-		//Todo Implement a better System
-		/*if missing {
-			s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, six)
-		}*/
+
+		responseMessage := ""
+		for _, roleName := range selecetRoles {
+			responseMessage += "+ " + roleName + "\n"
+		}
+
+		removes := map[string]string{}
+		if removable {
+			removes = RemoveUnsetRoles(s, i, &allRoles, &selecetRoles, guildMemberRoles)
+			for _, roleName := range removes {
+				responseMessage += "- " + roleName + "\n"
+			}
+		}
 
 		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			// Type Value must be one of {4, 5, 6, 7, 9}
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				TTS:             false,
-				Content:         "Du hast die Rolle/n erhalten: " + strings.Join(selecetRoles, ","),
-				Components:      nil,
-				Embeds:          nil,
-				AllowedMentions: nil,
-				Files:           nil,
-				Flags:           discordgo.MessageFlagsEphemeral,
-				Choices:         nil,
-				CustomID:        "",
-				Title:           "",
+				Components: nil,
+				Flags:      discordgo.MessageFlagsEphemeral,
+				Embeds: []*discordgo.MessageEmbed{
+					{
+						URL:         "",
+						Type:        "rich",
+						Title:       "Updated Roles",
+						Description: "```diff\n" + responseMessage + "```",
+						Timestamp:   "",
+						Color:       0,
+						Footer:      nil,
+						Image:       nil,
+						Thumbnail:   nil,
+						Video:       nil,
+						Provider:    nil,
+						Author:      nil,
+						Fields:      []*discordgo.MessageEmbedField{},
+					},
+				},
 			},
 		})
 		if err != nil {
 			panic(err)
 		}
 
-		/*s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				TTS:             false,
-				Content:         "You selected: " + strings.Join(i.MessageComponentData().Values, ", "),
-				Components:      nil,
-				Embeds:          nil,
-				AllowedMentions: nil,
-				Files:           nil,
-				Flags:           0,
-				Choices:         nil,
-				CustomID:        "",
-				Title:           "",
-			},
-		})*/
 	}
+}
+
+func UserHasRole(userRoles []string, role string) bool {
+	i := sort.SearchStrings(userRoles, role)
+	return i < len(userRoles) && userRoles[i] == role
+}
+
+// Remove the roles that are not in selectedRoles but in allRoles.
+//
+// Returns an Map with roleid and roleName with removed roles.
+func RemoveUnsetRoles(s *discordgo.Session, i *discordgo.InteractionCreate, allRoles *map[string]string, selectedRoles *map[string]string, guildMemberRoles []string) map[string]string {
+	response := make(map[string]string)
+	for key, value := range *allRoles {
+		// Check if all Role is in selectedRole, if not remove role
+		if _, ok := (*selectedRoles)[key]; !ok {
+			// Check if the User has the role, if not continue
+			if !UserHasRole(guildMemberRoles, key) {
+				continue
+			}
+			err := s.GuildMemberRoleRemove(i.GuildID, i.Member.User.ID, key)
+			if err != nil {
+				log.Panicf("Error with GuildMemberRoleRemove:\n%v", err)
+			}
+			response[key] = value
+		}
+	}
+	return response
 }
