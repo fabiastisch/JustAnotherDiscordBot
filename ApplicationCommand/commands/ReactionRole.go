@@ -104,10 +104,7 @@ func (e ReactionRole) Execute(s *discordgo.Session, i *discordgo.InteractionCrea
 					Default:     false,
 					Description: "-",
 				})
-			} else {
-				break
 			}
-
 		}
 		maxValues := 1
 		if opt, ok := optionMap["role-option-maxvalue"]; ok {
@@ -158,7 +155,7 @@ func (e ReactionRole) Execute(s *discordgo.Session, i *discordgo.InteractionCrea
 	}
 }
 
-func (f ReactionRole) HandleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func (e ReactionRole) HandleInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	switch i.Type {
 	case discordgo.InteractionMessageComponent:
 		if i.MessageComponentData().CustomID != "ApplicationReactionRole-select" && i.MessageComponentData().CustomID != "ApplicationReactionRole-select-removable" {
@@ -182,7 +179,7 @@ func (f ReactionRole) HandleInteractionCreate(s *discordgo.Session, i *discordgo
 				}
 			}
 		}
-		log.Println(reflect.TypeOf(f).Name() + " | InteractionMessageComponent: " + i.MessageComponentData().CustomID + " | User: " + i.Member.User.Username)
+		log.Println(reflect.TypeOf(e).Name() + " | InteractionMessageComponent: " + i.MessageComponentData().CustomID + " | User: " + i.Member.User.Username)
 
 		// get all GuildMember roles and sort it.
 		guildMemberRoles := i.Member.Roles
@@ -268,9 +265,9 @@ func UserHasRole(userRoles []string, role string) bool {
 	return i < len(userRoles) && userRoles[i] == role
 }
 
-// Remove the roles that are not in selectedRoles but in allRoles.
+// RemoveUnsetRoles Remove the roles that are not in selectedRoles but in allRoles.
 //
-// Returns an Map with roleid and roleName with removed roles.
+// Returns a Map with roleid and roleName with removed roles.
 func RemoveUnsetRoles(s *discordgo.Session, i *discordgo.InteractionCreate, allRoles *map[string]string, selectedRoles *map[string]string, guildMemberRoles []string) map[string]string {
 	response := make(map[string]string)
 	for key, value := range *allRoles {
