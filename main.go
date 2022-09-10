@@ -1,11 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
 	"justAnotherDiscordBot/ApplicationCommand"
 	"justAnotherDiscordBot/ApplicationCommand/commands"
+	"justAnotherDiscordBot/MessageCommand"
 	"log"
 	"os"
 	"os/signal"
@@ -15,6 +15,11 @@ import (
 var (
 	handlers []*ApplicationCommand.SlashCommandHandler
 )
+
+func init() {
+	//Configure log
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+}
 
 func main() {
 
@@ -35,7 +40,7 @@ func main() {
 	// Ready Function
 	bot.AddHandler(func(s *discordgo.Session, ready *discordgo.Ready) {
 		s.UpdateGameStatus(0, "Playing with commands.")
-		fmt.Printf("Logged in as: %v#%v\n", s.State.User.Username, s.State.User.Discriminator)
+		log.Printf("Logged in as: %v#%v\n", s.State.User.Username, s.State.User.Discriminator)
 	})
 
 	bot.AddHandler(reactOnMessage)
@@ -52,18 +57,21 @@ func main() {
 	defer bot.Close()
 
 	for _, guild := range bot.State.Guilds {
-		fmt.Println("Create Slash CommandHandler for Guild: " + guild.ID)
-		/*x, err := bot.Guild(guild.ID)
+		log.Println("Create Slash CommandHandler for Guild: " + guild.ID)
+		x, err := bot.Guild(guild.ID)
 		if err != nil {
 			return
 		}
-		fmt.Println(x.Name)*/
+		log.Println(x.Name)
 		h := ApplicationCommand.NewSlashCommandHandler(bot, guild.ID)
 		h.RegisterCommand(commands.Ping{})
+		h.RegisterCommand(commands.ReactionRole{})
 		handlers = append(handlers, h)
 	}
 
-	fmt.Printf("The Bot is now running\n")
+	MessageCommand.NewHandler(bot)
+
+	log.Printf("The Bot is now running\n")
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
