@@ -1,14 +1,17 @@
 package main
 
 import (
+	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
 	"justAnotherDiscordBot/ApplicationCommand"
 	"justAnotherDiscordBot/ApplicationCommand/commands"
 	"justAnotherDiscordBot/MessageCommand"
+	"justAnotherDiscordBot/WelcomeMessage"
 	"log"
 	"os"
 	"os/signal"
+	"reflect"
 	"syscall"
 )
 
@@ -44,10 +47,13 @@ func main() {
 	})
 
 	bot.AddHandler(reactOnMessage)
-	bot.Identify.Intents = discordgo.IntentGuildMessages
+
+	//bot.Identify.Intents = discordgo.IntentGuildMessages
+	bot.Identify.Intents = discordgo.IntentsAll
 	// connection will receive only events defined by this intent
 	// Todo: Add intents if needed
-
+	bot.AddHandler(WelcomeMessage.Handler)
+	bot.AddHandler(LOGHANDLER)
 	error = bot.Open()
 
 	if error != nil {
@@ -100,4 +106,10 @@ func reactOnMessage(session *discordgo.Session, message *discordgo.MessageCreate
 		return
 	}
 
+}
+
+func LOGHANDLER(s *discordgo.Session, i interface{}) {
+	color := "\u001b[33m"
+	reset := "\u001b[0m"
+	log.Println(color + "Event: " + fmt.Sprint(reflect.TypeOf(i)) + reset)
 }
