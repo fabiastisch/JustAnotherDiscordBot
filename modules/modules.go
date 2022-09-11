@@ -1,7 +1,8 @@
 package modules
 
-import WelcomeMessage2 "justAnotherDiscordBot/modules/WelcomeMessage"
+import "justAnotherDiscordBot/modules/messages"
 
 var (
-	WelcomeMessage = WelcomeMessage2.Handler
+	WelcomeMessage = messages.WelcomeMessage
+	LeaveMessage   = messages.LeaveMessage
 )

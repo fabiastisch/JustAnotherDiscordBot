@@ -53,6 +53,7 @@ func main() {
 	// connection will receive only events defined by this intent
 	// Todo: Add intents if needed
 	bot.AddHandler(WelcomeMessage)
+	bot.AddHandler(LeaveMessage)
 	bot.AddHandler(LOGHANDLER)
 	error = bot.Open()
 

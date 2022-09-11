@@ -19,7 +19,7 @@ type Picture struct {
 	img *image.RGBA
 }
 
-func Image(sizeX, sizeY int) Picture {
+func New(sizeX, sizeY int) Picture {
 	return Picture{
 		image.NewRGBA(image.Rectangle{
 			Min: image.Point{},
@@ -29,7 +29,7 @@ func Image(sizeX, sizeY int) Picture {
 }
 
 func (p Picture) Background(color color.RGBA) {
-	draw.Draw(p.img, p.img.Bounds(), &image.Uniform{C: color}, image.ZP, draw.Src)
+	draw.Draw(p.img, p.img.Bounds(), &image.Uniform{C: color}, image.Point{}, draw.Src)
 }
 
 func (p Picture) DrawImage(image2 image.Image, posX, posY int) {
