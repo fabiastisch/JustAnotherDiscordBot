@@ -55,6 +55,15 @@ func main() {
 	bot.AddHandler(WelcomeMessage)
 	bot.AddHandler(LeaveMessage)
 	bot.AddHandler(LOGHANDLER)
+
+	/*	t := timed.New(bot)
+		d, err := time.ParseDuration("1m")
+		index := 0
+		t.Schedule(func(s *discordgo.Session, data ...any) {
+			_, _ = s.ChannelMessageSend("1012517914865320029", "Timed: "+fmt.Sprint(index))
+			index++
+		}, d, nil)
+	*/
 	error = bot.Open()
 
 	if error != nil {
