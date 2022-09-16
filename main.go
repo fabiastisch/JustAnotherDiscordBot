@@ -82,6 +82,7 @@ func main() {
 		h := ApplicationCommand.NewSlashCommandHandler(bot, guild.ID)
 		h.RegisterCommand(commands.Ping{})
 		h.RegisterCommand(commands.ReactionRole{})
+		h.RegisterCommand(commands.Remember{})
 		handlers = append(handlers, h)
 	}
 
