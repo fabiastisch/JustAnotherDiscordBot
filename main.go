@@ -83,6 +83,7 @@ func main() {
 		h.RegisterCommand(commands.Ping{})
 		h.RegisterCommand(commands.ReactionRole{})
 		h.RegisterCommand(commands.Remember{})
+		h.RegisterCommand(commands.Canteen{})
 		handlers = append(handlers, h)
 	}
 
