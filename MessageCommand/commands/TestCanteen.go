@@ -85,6 +85,27 @@ func GetCanteenPic() *Picture.Picture {
 	return buildImage(menu)
 }
 
+func GetCanteenImageReader() *os.File {
+	img := GetCanteenPic()
+	reader, writer, err := os.Pipe()
+
+	go func() {
+		// close the writer, so the reader knows there's no more data
+		defer writer.Close()
+		if err != nil {
+			log.Panic(err)
+		}
+		//err = png.Encode(writer, img.GetImage())
+		err = png.Encode(writer, img.GetImage())
+
+		if err != nil {
+			writer.Close()
+			log.Panicln(err)
+		}
+	}()
+	return reader
+}
+
 func (e TestCanteen) Execute(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	img := GetCanteenPic()
 	reader, writer, err := os.Pipe()

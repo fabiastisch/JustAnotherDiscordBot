@@ -7,6 +7,7 @@ import (
 	"justAnotherDiscordBot/ApplicationCommand"
 	"justAnotherDiscordBot/MessageCommand"
 	. "justAnotherDiscordBot/modules"
+	"justAnotherDiscordBot/modules/cronStuff"
 	"log"
 	"os"
 	"os/signal"
@@ -88,6 +89,8 @@ func main() {
 	}*/
 
 	MessageCommand.NewHandler(bot)
+
+	cronStuff.MensaMenu(bot)
 
 	log.Printf("The Bot is now running\n")
 
