@@ -24,6 +24,7 @@ func NewHandler(session *discordgo.Session) (handler *Handler) {
 	handler.session.AddHandler(handler.HandleInteractionCreate)
 	handler.RegisterCommand(commands.ReactionRole{})
 	handler.RegisterCommand(commands.Foo{})
+	handler.RegisterCommand(commands.TestCanteen{})
 	return
 }
 

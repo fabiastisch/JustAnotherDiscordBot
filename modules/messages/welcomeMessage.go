@@ -18,7 +18,7 @@ func WelcomeMessage(s *discordgo.Session, e *discordgo.GuildMemberAdd) {
 
 	img.Background(color.RGBA{B: 100, A: 255})
 	// y := bottomline
-	img.AddLabelCenterHorizontal("Willkommen "+e.Member.User.Username, 0, color.White)
+	img.AddLabelCenterHorizontal("Willkommen "+e.Member.User.Username, 0, color.White, 28)
 	//avatar, err := s.UserAvatar(e.Member.User.ID)
 	//img.AddLabel(10, 200, e.Author.AvatarURL("256"))
 	//avatar, err := s.UserAvatarDecode(e.Author)

@@ -5,7 +5,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
 	"justAnotherDiscordBot/ApplicationCommand"
-	"justAnotherDiscordBot/ApplicationCommand/commands"
 	"justAnotherDiscordBot/MessageCommand"
 	. "justAnotherDiscordBot/modules"
 	"log"
@@ -72,7 +71,7 @@ func main() {
 	}
 	defer bot.Close()
 
-	for _, guild := range bot.State.Guilds {
+	/*for _, guild := range bot.State.Guilds {
 		log.Println("Create Slash CommandHandler for Guild: " + guild.ID)
 		x, err := bot.Guild(guild.ID)
 		if err != nil {
@@ -84,8 +83,9 @@ func main() {
 		h.RegisterCommand(commands.ReactionRole{})
 		h.RegisterCommand(commands.Remember{})
 		h.RegisterCommand(commands.Canteen{})
+		h.RegisterCommand(commands.TestCanteen{})
 		handlers = append(handlers, h)
-	}
+	}*/
 
 	MessageCommand.NewHandler(bot)
 

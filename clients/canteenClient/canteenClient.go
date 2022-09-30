@@ -2,12 +2,16 @@ package canteenClient
 
 import (
 	"encoding/xml"
+	"errors"
+	"fmt"
 	"github.com/bwmarrin/discordgo"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
 	_ "strconv"
 	"strings"
+	"time"
 )
 
 var data = `
@@ -114,6 +118,36 @@ func Request(session *discordgo.Session, interactionCreate *discordgo.Interactio
 	}
 
 	return resp.Status
+}
+
+func GetCanteenMenu(date time.Time) (*Menu, error) {
+	year, month, day := date.Date()
+
+	uri := fmt.Sprintf("https://www.swcz.de/bilderspeiseplan/xml.php?plan=4&jahr=%d&monat=%d&tag=%d", year, month, day)
+	log.Println("Request: " + uri)
+	resp, err := http.Get(uri)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return &Menu{}, errors.New("Status not Ok" + fmt.Sprint(resp.StatusCode))
+	}
+	menu := new(Menu)
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = xml.Unmarshal(bodyBytes, menu)
+	log.Println(fmt.Sprintf("%+v\n", menu))
+	if err != nil {
+		log.Fatal(err)
+	}
+	if len(menu.Meal) == 0 {
+		return menu, nil
+	}
+
+	return menu, nil
 }
 
 func buildResponse(session *discordgo.Session, interactionCreate *discordgo.InteractionCreate, menu *Menu) {
