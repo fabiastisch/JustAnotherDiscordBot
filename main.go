@@ -5,16 +5,23 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
 	"justAnotherDiscordBot/ApplicationCommand"
-	"justAnotherDiscordBot/ApplicationCommand/commands"
+	"justAnotherDiscordBot/MessageCommand"
+	. "justAnotherDiscordBot/modules"
 	"log"
 	"os"
 	"os/signal"
+	"reflect"
 	"syscall"
 )
 
 var (
 	handlers []*ApplicationCommand.SlashCommandHandler
 )
+
+func init() {
+	//Configure log
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+}
 
 func main() {
 
@@ -35,14 +42,27 @@ func main() {
 	// Ready Function
 	bot.AddHandler(func(s *discordgo.Session, ready *discordgo.Ready) {
 		s.UpdateGameStatus(0, "Playing with commands.")
-		fmt.Printf("Logged in as: %v#%v\n", s.State.User.Username, s.State.User.Discriminator)
+		log.Printf("Logged in as: %v#%v\n", s.State.User.Username, s.State.User.Discriminator)
 	})
 
 	bot.AddHandler(reactOnMessage)
-	bot.Identify.Intents = discordgo.IntentGuildMessages
+
+	//bot.Identify.Intents = discordgo.IntentGuildMessages
+	bot.Identify.Intents = discordgo.IntentsAll
 	// connection will receive only events defined by this intent
 	// Todo: Add intents if needed
+	bot.AddHandler(WelcomeMessage)
+	bot.AddHandler(LeaveMessage)
+	bot.AddHandler(LOGHANDLER)
 
+	/*	t := timed.New(bot)
+		d, err := time.ParseDuration("1m")
+		index := 0
+		t.Schedule(func(s *discordgo.Session, data ...any) {
+			_, _ = s.ChannelMessageSend("1012517914865320029", "Timed: "+fmt.Sprint(index))
+			index++
+		}, d, nil)
+	*/
 	error = bot.Open()
 
 	if error != nil {
@@ -51,19 +71,25 @@ func main() {
 	}
 	defer bot.Close()
 
-	for _, guild := range bot.State.Guilds {
-		fmt.Println("Create Slash CommandHandler for Guild: " + guild.ID)
-		/*x, err := bot.Guild(guild.ID)
+	/*for _, guild := range bot.State.Guilds {
+		log.Println("Create Slash CommandHandler for Guild: " + guild.ID)
+		x, err := bot.Guild(guild.ID)
 		if err != nil {
 			return
 		}
-		fmt.Println(x.Name)*/
+		log.Println(x.Name)
 		h := ApplicationCommand.NewSlashCommandHandler(bot, guild.ID)
 		h.RegisterCommand(commands.Ping{})
+		h.RegisterCommand(commands.ReactionRole{})
+		h.RegisterCommand(commands.Remember{})
+		h.RegisterCommand(commands.Canteen{})
+		h.RegisterCommand(commands.TestCanteen{})
 		handlers = append(handlers, h)
-	}
+	}*/
 
-	fmt.Printf("The Bot is now running\n")
+	MessageCommand.NewHandler(bot)
+
+	log.Printf("The Bot is now running\n")
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
@@ -92,4 +118,10 @@ func reactOnMessage(session *discordgo.Session, message *discordgo.MessageCreate
 		return
 	}
 
+}
+
+func LOGHANDLER(s *discordgo.Session, i interface{}) {
+	color := "\u001b[33m"
+	reset := "\u001b[0m"
+	log.Println(color + "Event: " + fmt.Sprint(reflect.TypeOf(i)) + reset)
 }
