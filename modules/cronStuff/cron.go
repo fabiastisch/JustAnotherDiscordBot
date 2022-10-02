@@ -9,19 +9,63 @@ import (
 )
 
 func MensaMenu(session *discordgo.Session) {
-	log.Println()
+
 	c := cron.New(cron.WithLocation(time.UTC), cron.WithSeconds())
 	//test := "lol"
 	/*c.Schedule(cron.Every(time.Second), cron.FuncJob(func() {
 		log.Println(test)
 	}))*/
 	// second minute hour ...+
-	mensaChannel := "1025441316592693319"
-	RemoveAllChannelMessages(session, mensaChannel)
 
-	imgFile := commands.GetCanteenImageReader()
+	_, err := c.AddFunc("0 1 15 * * *", func() { // 15:01 Clock
+
+		log.Println("Call Mensa cron")
+		mensaChannel := "1025441316592693319"
+		RefreshMensaMenu(session, mensaChannel, 7)
+	})
+	log.Println("Added Mensa Cron")
+	mensaChannel := "1025441316592693319"
+	RefreshMensaMenu(session, mensaChannel, 7)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	c.Start()
+
+}
+
+func RefreshMensaMenu(session *discordgo.Session, channelID string, daysDays int) {
+	RemoveAllChannelMessages(session, channelID)
+
+	today := time.Now()
+	if today.Hour() >= 15 {
+		today = today.AddDate(0, 0, 1)
+	}
+	for i := daysDays - 1; i >= 0; i-- {
+		imgFile := commands.GetCanteenImageReader(today.AddDate(0, 0, i))
+		if imgFile != nil {
+			defer imgFile.Close()
+			session.ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
+				Content:    "",
+				Embeds:     nil,
+				TTS:        false,
+				Components: nil,
+				Files: []*discordgo.File{
+					{
+						Name:        "welcome.png",
+						ContentType: "image/png",
+						Reader:      imgFile,
+					},
+				},
+				AllowedMentions: nil,
+				Reference:       nil,
+				File:            nil,
+				Embed:           nil,
+			})
+		}
+	}
+	/*imgFile := commands.GetCanteenImageReader(today.AddDate(0, 0, 2))
 	defer imgFile.Close()
-	session.ChannelMessageSendComplex(mensaChannel, &discordgo.MessageSend{
+	session.ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
 		Content:    "",
 		Embeds:     nil,
 		TTS:        false,
@@ -38,15 +82,7 @@ func MensaMenu(session *discordgo.Session) {
 		File:            nil,
 		Embed:           nil,
 	})
-
-	_, err := c.AddFunc("1 * * * * *", func() {
-		log.Println("-")
-	})
-	if err != nil {
-		log.Fatalln(err)
-	}
-	c.Start()
-
+	*/
 }
 
 func RemoveAllChannelMessages(session *discordgo.Session, channel string) {
@@ -58,7 +94,7 @@ func RemoveAllChannelMessages(session *discordgo.Session, channel string) {
 	if err != nil {
 		return
 	}
-	log.Printf("ChannelMessages: %d\n", len(messages)) // TODO 0 Messages
+	//log.Printf("ChannelMessages: %d\n", len(messages))
 
 	for i, m := range messages {
 		if (i+1)%100 == 0 {
@@ -68,7 +104,7 @@ func RemoveAllChannelMessages(session *discordgo.Session, channel string) {
 			continue
 		}
 		messagesIdsTemp = append(messagesIdsTemp, m.ID)
-		log.Printf(m.ID)
+		//log.Printf(m.ID)
 	}
 	messagesIds = append(messagesIds, messagesIdsTemp)
 

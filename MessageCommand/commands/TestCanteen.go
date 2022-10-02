@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"github.com/bwmarrin/discordgo"
+	"image"
 	"image/color"
 	"image/png"
 	"justAnotherDiscordBot/Picture"
@@ -23,7 +24,7 @@ func (f TestCanteen) ReactOnMessage(session *discordgo.Session, message *discord
 
 	if message.Content == f.Name() {
 		//session.ChannelMessageSend(message.ChannelID, "bar")
-		img := GetCanteenPic()
+		img := GetCanteenPic(time.Now())
 
 		reader, writer, err := os.Pipe()
 		defer reader.Close()
@@ -76,17 +77,20 @@ func (e TestCanteen) ApplicationCommand() *discordgo.ApplicationCommand {
 	}
 }
 
-func GetCanteenPic() *Picture.Picture {
-	menu, err := canteenClient.GetCanteenMenu(time.Now())
+func GetCanteenPic(date time.Time) *Picture.Picture {
+	menu, err := canteenClient.GetCanteenMenu(date)
 	if err != nil {
 		return nil
 	}
 
-	return buildImage(menu)
+	return buildImage(menu, date)
 }
 
-func GetCanteenImageReader() *os.File {
-	img := GetCanteenPic()
+func GetCanteenImageReader(date time.Time) *os.File {
+	img := GetCanteenPic(date)
+	if img == nil {
+		return nil
+	}
 	reader, writer, err := os.Pipe()
 
 	go func() {
@@ -107,7 +111,7 @@ func GetCanteenImageReader() *os.File {
 }
 
 func (e TestCanteen) Execute(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	img := GetCanteenPic()
+	img := GetCanteenPic(time.Now())
 	reader, writer, err := os.Pipe()
 	defer reader.Close()
 
@@ -149,10 +153,18 @@ func (e TestCanteen) Execute(s *discordgo.Session, i *discordgo.InteractionCreat
 	})
 }
 
-func buildImage(menu *canteenClient.Menu) *Picture.Picture {
+func buildImage(menu *canteenClient.Menu, date time.Time) *Picture.Picture {
 	countMeals := len(menu.Meal)
+	//log.Printf("Menu: %d\n", len(menu.Meal))
+
+	if countMeals == 0 {
+		return nil
+	}
+	if countMeals == 1 && menu.Meal[0].Category == "Feiertag" { //API returns a Holiday message in a meal
+		return nil
+	}
 	mealYSize := 190
-	mealXImgSize := 190
+	//mealXImgSize := 190
 	sizeX := 1000
 	sizeY := countMeals * (mealYSize + 28)
 	img := Picture.New(sizeX, sizeY+100)
@@ -164,55 +176,77 @@ func buildImage(menu *canteenClient.Menu) *Picture.Picture {
 	topMargin := 0
 	topOffset += topMargin
 	height := img.AddLabelCenterHorizontal(
-		fmt.Sprintf("Mensaplan %s.%s.%s", menu.Date.Day, menu.Date.Month, menu.Date.Year), topMargin, color.White, 40)
+		fmt.Sprintf("Mensaplan %s, %s.%s.%s", date.Weekday(), menu.Date.Day, menu.Date.Month, menu.Date.Year), topMargin, color.White, 40)
 	topOffset += height.Ceil() + 20
 	//lineHeight := 1
 	//img.DrawLine(topOffset, color.Black, lineHeight)
 	//topOffset += lineHeight
+	skipIndexes := map[int]bool{}
+	for i, meal := range menu.Meal {
+		if meal.Category == "Hinweis" {
+			topOffset += AddMealToImage(meal, img, topOffset+len(skipIndexes)*mealYSize) + mealYSize
+			skipIndexes[i] = true
+			menu.Meal = append(menu.Meal[:i], menu.Meal[i+1:]...)
+		}
+	}
 
 	for i, meal := range menu.Meal {
-		log.Println(i)
-		if meal.Img == "true" {
-
-			topOffset += img.AddLabelCenterHorizontalWithOffset(meal.Category, mealXImgSize-sizeX, topOffset+i*mealYSize, color.White, 26).Ceil() + 2 // 26p height + 2
-
-			//topOffset += img.AddLabel(0, topOffset+i*mealYSize, 26, color.White, meal.Category).Ceil() // 26p height
-			mealImg := Picture.GetImageFromURL(meal.ImgSmall)
-			x := 0 //i * 200 % sizeX
-			y := topOffset + i*mealYSize
-
-			log.Println(fmt.Sprintf("Draw Img: %d | %d", x, y))
-			img.DrawImage(mealImg, x, y)
-
-			img.AddLabelCenterHorizontalWithOffset(meal.Description.Value, mealXImgSize*1, y, color.White, 30)
-			img.AddLabelCenterHorizontalWithOffsetBottom(GetPrices(meal), mealXImgSize*1, topOffset+(i+1)*mealYSize-25, color.White, 26)
-
-			mealXOffset := 0
-			if ok, _ := strconv.ParseBool(meal.Alcohol); ok {
-				pic, _ := Picture.GetImageFromFilePath("Picture/food/alkohol.png")
-				img.DrawImage(pic, mealXImgSize+mealXOffset, topOffset+(i+1)*mealYSize-pic.Bounds().Size().Y)
-				mealXOffset += pic.Bounds().Size().X
-			}
-			if ok, _ := strconv.ParseBool(meal.Beef); ok {
-				pic, _ := Picture.GetImageFromFilePath("Picture/food/rind.png")
-				img.DrawImage(pic, mealXImgSize+mealXOffset, topOffset+(i+1)*mealYSize-pic.Bounds().Size().Y)
-				mealXOffset += pic.Bounds().Size().X
-			}
-			if ok, _ := strconv.ParseBool(meal.Pig); ok {
-				pic, _ := Picture.GetImageFromFilePath("Picture/food/schwein.png")
-				img.DrawImage(pic, mealXImgSize+mealXOffset, topOffset+(i+1)*mealYSize-pic.Bounds().Size().Y)
-				mealXOffset += pic.Bounds().Size().X
-			}
-			if ok, _ := strconv.ParseBool(meal.Vegetarian); ok {
-				pic, _ := Picture.GetImageFromFilePath("Picture/food/vegetarisch.png")
-				img.DrawImage(pic, mealXImgSize+mealXOffset, topOffset+(i+1)*mealYSize-pic.Bounds().Size().Y)
-				mealXOffset += pic.Bounds().Size().X
-			}
-		}
-
+		/*if skipIndexes[i] {
+			continue
+		}*/
+		topOffset += AddMealToImage(meal, img, topOffset+i*mealYSize)
 	}
 
 	return &img
+}
+
+func AddMealToImage(meal canteenClient.Meal, img Picture.Picture, posY int) int {
+	//log.Println(i)
+	//topOffset += img.AddLabelCenterHorizontalWithOffset(meal.Category, mealXImgSize-sizeX, topOffset+i*mealYSize, color.White, 26).Ceil() + 2 // 26p height + 2
+	//topOffset += img.AddLabelCenterHorizontalWithOffset(meal.Category, mealXImgSize-sizeX, topOffset+i*mealYSize, color.White, 26).Ceil() + 2 // 26p height + 2
+
+	//topOffset += img.AddLabel(0, topOffset+i*mealYSize, 26, color.White, meal.Category).Ceil() // 26p height
+	x := 0 //i * 200 % sizeX
+	y := posY
+	mealImgSize := image.Point{}
+	y += img.AddLabel(20, y, 26, color.White, meal.Category).Ceil() + 2
+
+	if meal.Img == "true" {
+		mealImg := Picture.GetImageFromURL(meal.ImgSmall)
+		mealImgSize = mealImg.Bounds().Size()
+		img.DrawImage(mealImg, x, y)
+	}
+	//y += img.AddLabelCenterHorizontalWithOffset(meal.Category, mealImgSize.X-img.GetImage().Bounds().Size().X, y, color.White, 26).Ceil() + 2 // 26p height + 2
+
+	//log.Println(fmt.Sprintf("Draw Img: %d | %d", x, y))
+
+	img.AddLabelCenterHorizontalWithOffset(meal.Description.Value, mealImgSize.X*1, y, color.White, 30)
+	img.AddLabelCenterHorizontalWithOffsetBottom(GetPrices(meal), mealImgSize.X*1, posY+(+1)*mealImgSize.Y-25, color.White, 26)
+
+	// Icons
+	mealXOffset := 0
+	addImage := func(pic image.Image) {
+		img.DrawImage(pic, mealImgSize.X+mealXOffset, y+mealImgSize.Y-pic.Bounds().Size().Y)
+		mealXOffset += pic.Bounds().Size().X
+	}
+
+	if ok, _ := strconv.ParseBool(meal.Alcohol); ok {
+		pic, _ := Picture.GetImageFromFilePath("Picture/food/alkohol.png")
+		addImage(pic)
+	}
+	if ok, _ := strconv.ParseBool(meal.Beef); ok {
+		pic, _ := Picture.GetImageFromFilePath("Picture/food/rind.png")
+		addImage(pic)
+	}
+	if ok, _ := strconv.ParseBool(meal.Pig); ok {
+		pic, _ := Picture.GetImageFromFilePath("Picture/food/schwein.png")
+		addImage(pic)
+	}
+	if ok, _ := strconv.ParseBool(meal.Vegetarian); ok {
+		pic, _ := Picture.GetImageFromFilePath("Picture/food/vegetarisch.png")
+		addImage(pic)
+	}
+	return y - posY
 }
 
 func GetPrices(meal canteenClient.Meal) string {
@@ -220,16 +254,25 @@ func GetPrices(meal canteenClient.Meal) string {
 	employee := "M"
 	guest := "G"
 
+	studentPrice := ""
+	guestPrice := ""
+	employeePrice := ""
+
 	for _, s := range meal.Price {
 		switch s.Group {
 		case student:
-			student = s.GroupPrice
+			studentPrice = s.GroupPrice
 		case guest:
-			guest = s.GroupPrice
+			guestPrice = s.GroupPrice
 		case employee:
-			employee = s.GroupPrice
-		}
+			employeePrice = s.GroupPrice
+		default:
 
+			break
+		}
 	}
-	return fmt.Sprintf("%s/%s/%s €", student, employee, guest)
+	if studentPrice == "" || employeePrice == "" || guestPrice == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s/%s/%s €", studentPrice, employeePrice, guestPrice)
 }

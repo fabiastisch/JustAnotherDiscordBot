@@ -139,7 +139,7 @@ func GetCanteenMenu(date time.Time) (*Menu, error) {
 		log.Fatal(err)
 	}
 	err = xml.Unmarshal(bodyBytes, menu)
-	log.Println(fmt.Sprintf("%+v\n", menu))
+	//log.Println(fmt.Sprintf("%+v\n", menu))
 	if err != nil {
 		log.Fatal(err)
 	}
