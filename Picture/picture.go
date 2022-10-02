@@ -66,11 +66,10 @@ func (p Picture) advancedMeasureString(label string, d *font.Drawer, xOffset int
 	var newLabels []string
 	newLabel := ""
 	for _, word := range labels {
-
 		measure := d.MeasureString(newLabel + word).Round()
 		if measure >= p.img.Bounds().Size().X-xOffset {
 			newLabels = append(newLabels, newLabel)
-			newLabel = ""
+			newLabel = word
 			//newLabel = newLabel + "\n" + word
 		} else {
 			newLabel = newLabel + " " + word
